@@ -1,0 +1,184 @@
+from IPython.display import HTML, display
+
+display(HTML('''
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: lavender; padding: 20px; }
+    h2 { color: #4B0082; }
+    .symptom-list { columns: 2; max-height: 300px; overflow-y: auto; margin-bottom: 15px; }
+    .symptom { margin: 5px; display: block; }
+    button { padding: 10px 20px; background-color: indigo; color: white; border: none; cursor: pointer; border-radius: 8px; }
+    button:hover { background-color: #483d8b; }
+    .result { margin-top: 20px; font-size: 18px; font-weight: bold; color: darkgreen; }
+    .progress { margin-top: 20px; font-size: 16px; color: gray; }
+    .reset-button { margin-top: 20px; padding: 10px 20px; background-color: #ff6347; color: white; border: none; cursor: pointer; border-radius: 8px; }
+    .tips { margin-top: 20px; font-size: 16px; color: #333; }
+    .tips ul { list-style-type: square; }
+    .tips li { margin-bottom: 10px; }
+    .health-history { margin-top: 20px; font-size: 16px; color: #333; }
+  </style>
+</head>
+<body>
+
+<h2>Disease Prediction App</h2>
+
+<div class="progress" id="progress">Please select your symptoms below.</div>
+
+<div class="symptom-list" id="symptom-list"></div>
+
+<button onclick="predictDisease()">Predict</button>
+<button class="reset-button" onclick="resetForm()">Reset</button>
+
+<div class="result" id="result"></div>
+
+<div class="tips" id="tips"></div>
+
+<div class="health-history" id="health-history">
+  <h3>Health History</h3>
+  <div id="history"></div>
+</div>
+
+<button id="next" onclick="nextPage()" style="margin-top: 20px;">Next</button>
+<button id="download-pdf" onclick="generatePDF()" style="margin-top: 20px;">Download PDF Report</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+// Disease and symptoms data
+const diseases = [
+  {
+    disease: "Fungal infection",
+    symptoms: ["itching", "skin_rash", "nodal_skin_eruptions", "dischromic _patches"],
+    tips: ["Keep the affected area clean and dry.", "Use antifungal creams.", "Wear loose-fitting clothes."]
+  },
+  {
+    disease: "Allergy",
+    symptoms: ["continuous_sneezing", "shivering", "chills", "watering_from_eyes"],
+    tips: ["Avoid allergens like pollen and dust.", "Use antihistamines for relief.", "Consider using a nasal spray."]
+  },
+  {
+    disease: "GERD",
+    symptoms: ["stomach_pain", "acidity", "ulcers_on_tongue", "vomiting", "cough", "chest_pain"],
+    tips: ["Eat smaller, more frequent meals.", "Avoid spicy or acidic foods.", "Sleep with your head elevated."]
+  },
+  {
+    disease: "Chronic cholestasis",
+    symptoms: ["itching", "vomiting", "yellowish_skin", "nausea", "loss_of_appetite", "abdominal_pain", "yellowing_of_eyes"],
+    tips: ["Drink plenty of fluids.", "Avoid fatty or oily foods.", "Rest and take prescribed medication."]
+  },
+  {
+    disease: "Drug Reaction",
+    symptoms: ["itching", "skin_rash", "stomach_pain", "burning_micturition", "spotting_urination"],
+    tips: ["Stop taking the drug and consult your doctor.", "Use anti-inflammatory medications.", "Stay hydrated."]
+  }
+];
+
+// Get all symptoms from the diseases
+const allSymptoms = [...new Set(diseases.flatMap(d => d.symptoms))];
+const listDiv = document.getElementById("symptom-list");
+
+allSymptoms.forEach(sym => {
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = sym;
+  checkbox.className = "symptom";
+  listDiv.appendChild(checkbox);
+  listDiv.append(" " + sym);
+  listDiv.appendChild(document.createElement("br"));
+});
+
+// Function to predict the disease based on selected symptoms
+function predictDisease() {
+  const selected = [...document.querySelectorAll(".symptom:checked")].map(cb => cb.value);
+  let bestMatch = "", maxCount = 0;
+  let predictedDisease = "";
+
+  // Show progress while processing
+  document.getElementById("progress").innerText = "Processing prediction...";
+
+  // Check for matching diseases
+  diseases.forEach(d => {
+    const matchCount = d.symptoms.filter(s => selected.includes(s)).length;
+    if (matchCount > maxCount) {
+      maxCount = matchCount;
+      bestMatch = d.disease;
+      predictedDisease = d;
+    }
+  });
+
+  // Display the result
+  const resultDiv = document.getElementById("result");
+  if (bestMatch) {
+    resultDiv.innerText = "Predicted Disease: " + bestMatch;
+    showHealthTips(predictedDisease);
+    saveHealthHistory(bestMatch);  // Save disease to history
+  } else {
+    resultDiv.innerText = "No match found. Try selecting more symptoms.";
+    document.getElementById("tips").innerHTML = "";
+  }
+
+  // Reset progress message
+  document.getElementById("progress").innerText = "";
+}
+
+// Function to display health tips based on the predicted disease
+function showHealthTips(disease) {
+  const tipsDiv = document.getElementById("tips");
+  if (disease && disease.tips) {
+    let tipsList = "<h3>Health Tips & Remedies:</h3><ul>";
+    disease.tips.forEach(tip => {
+      tipsList += `<li>${tip}</li>`;
+    });
+    tipsList += "</ul>";
+    tipsDiv.innerHTML = tipsList;
+  } else {
+    tipsDiv.innerHTML = "";
+  }
+}
+
+// Function to save health history
+let healthHistory = [];
+function saveHealthHistory(disease) {
+  healthHistory.push(disease);
+  const historyDiv = document.getElementById("history");
+  historyDiv.innerHTML = healthHistory.join("<br>");
+}
+
+// Function to reset the form
+function resetForm() {
+  document.querySelectorAll(".symptom").forEach(cb => cb.checked = false);
+  document.getElementById("result").innerText = "";
+  document.getElementById("tips").innerHTML = "";
+  document.getElementById("progress").innerText = "Please select your symptoms below.";
+}
+
+// Function to go to next page or feature
+function nextPage() {
+  // For now, this will just show an alert
+  alert("Next feature coming soon!");
+}
+
+// Function to generate PDF report
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const disease = document.getElementById("result").innerText;
+  const tips = document.getElementById("tips").innerText;
+
+  doc.text("Disease Prediction Report", 20, 10);
+  doc.text(disease, 20, 20);
+  doc.text("Health Tips:", 20, 30);
+  doc.text(tips, 20, 40);
+
+  doc.save("Disease_Prediction_Report.pdf");
+}
+
+</script>
+
+</body>
+</html>
+'''))
+
